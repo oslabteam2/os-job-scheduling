@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <time.h>
 #include "job.h"
-
 int jobid=0;
 int siginfo=1;
 int fifo;
@@ -165,9 +164,8 @@ void sig_handler(int sig,siginfo_t *info,void *notused)
 {
 	int status;
 	int ret;
-
 	switch (sig) {
-case SIGVTALRM: /* 到达计时器所设置的计时间隔 */
+case SIGALRM: /* 到达计时器所设置的计时间隔 */
 	scheduler();
 	return;
 case SIGCHLD: /* 子进程结束时传送给父进程的信号 */
@@ -268,12 +266,18 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 		exit(1);
 	}else{
 		newjob->pid=pid;
+		if(head==newnode)
+		{
+            sleep(1);
+            //printf("SEND SIGNAL CONTINUE %d\n",kill(pid,SIGCONT));
+            kill(pid,SIGCONT);
+		}
 	}
 }
 
 void do_deq(struct jobcmd deqcmd)
 {
-	int deqid,i;
+	int deqid,i,found=0;
 	struct waitqueue *p,*prev,*select,*selectprev;
 	deqid=atoi(deqcmd.data);
 
@@ -302,11 +306,14 @@ void do_deq(struct jobcmd deqcmd)
 				if(p->job->jid==deqid){
 					select=p;
 					selectprev=prev;
+					found=1;
 					break;
 				}
-				selectprev->next=select->next;
-				if(select==selectprev)
-					head=NULL;
+				if(found==1){
+                    selectprev->next=select->next;
+                    if(select==selectprev)
+                        head=NULL;
+                }
 		}
 		if(select){
 			for(i=0;(select->job->cmdarg)[i]!=NULL;i++){
@@ -317,6 +324,10 @@ void do_deq(struct jobcmd deqcmd)
 			free(select->job);
 			free(select);
 			select=NULL;
+		}
+		if(found==0)
+		{
+            printf("No such jobID in the Job queue.\n");
 		}
 	}
 }
@@ -388,7 +399,7 @@ int main()
 	sigemptyset(&newact.sa_mask);
 	newact.sa_flags=SA_SIGINFO;
 	sigaction(SIGCHLD,&newact,&oldact1);
-	sigaction(SIGVTALRM,&newact,&oldact2);
+	sigaction(SIGALRM,&newact,&oldact2);
 
 	/* 设置时间间隔为1000毫秒 */
 	interval.tv_sec=1;
@@ -396,7 +407,7 @@ int main()
 
 	new.it_interval=interval;
 	new.it_value=interval;
-	setitimer(ITIMER_VIRTUAL,&new,&old);
+	setitimer(ITIMER_REAL,&new,&old);
 
 	while(siginfo==1);
 
