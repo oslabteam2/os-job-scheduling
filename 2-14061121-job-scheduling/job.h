@@ -22,7 +22,7 @@ enum jobstate{
 };
 
 enum cmdtype{
-    ENQ=-1,DEQ=-2,STAT=-3 
+    ENQ=-1,DEQ=-2,STAT=-3
 };
 struct jobcmd{
     enum cmdtype type;
@@ -45,6 +45,7 @@ struct jobinfo{
     time_t create_time;   /* 作业创建时间 */
     int run_time;         /* 作业运行时间 */
     enum jobstate state;  /* 作业状态 */
+    int timer;
 };
 
 struct waitqueue{
@@ -63,6 +64,10 @@ void do_stat(struct jobcmd statcmd);
 void updateall();
 struct waitqueue* jobselect();
 void jobswitch();
+struct waitqueue *RemoveFromQueue(struct waitqueue* des, int Jobid);
+struct waitqueue *AddToQueue(struct waitqueue* des, struct waitqueue* tar);
+void print(struct waitqueue *tar);
+void trim();
 
 void error_doit(int errnoflag,const char *fmt,va_list ap);
 void error_sys(const char *fmt,...);

@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include "job.h"
 #define DEBUG
-/* 
+/*
  * √¸¡Ó”Ô∑®∏Ò Ω
  *     enq [-p num] e_file args
  */
@@ -20,7 +20,7 @@ void usage()
 
 int main(int argc,char *argv[])
 {
-	int p=0;
+	int p=1;
 	int fd;
 	char c,*offset;
 	struct jobcmd enqcmd;
@@ -72,7 +72,7 @@ int main(int argc,char *argv[])
 			"enqcmd data\t%s\n",
 			enqcmd.type,enqcmd.owner,enqcmd.defpri,enqcmd.data);
 
-    #endif 
+    #endif
 
 		if((fd=open("/tmp/server",O_WRONLY))<0)
 			error_sys("enq open fifo failed");
