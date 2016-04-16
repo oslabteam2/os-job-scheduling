@@ -65,22 +65,23 @@ int main(int argc,char *argv[])
 		argv++;
 	}
 
-    #ifdef DEBUG
-		printf("enqcmd cmdtype\t%d\n"
+    	#ifdef DEBUG
+		printf("enqcmd cmdtype\t%d (-1 means ENQ, -2 means DEQ, -3 means STAT)\n"
 			"enqcmd owner\t%d\n"
 			"enqcmd defpri\t%d\n"
-			"enqcmd data\t%s\n",
-			enqcmd.type,enqcmd.owner,enqcmd.defpri,enqcmd.data);
+			"enqcmd data\t%s\n"
+			"enqcmd argnum\t%d\n",			
+			enqcmd.type,enqcmd.owner,enqcmd.defpri,enqcmd.data,enqcmd.argnum);
 
-    #endif
+    	#endif
 
-		if((fd=open("/tmp/server",O_WRONLY))<0)
-			error_sys("enq open fifo failed");
+	if((fd=open("/tmp/server",O_WRONLY))<0)
+		error_sys("enq open fifo failed");
 
-		if(write(fd,&enqcmd,DATALEN)<0)
-			error_sys("enq write failed");
+	if(write(fd,&enqcmd,DATALEN)<0)
+		error_sys("enq write failed");
 
-		close(fd);
-		return 0;
+	close(fd);
+	return 0;
 }
 

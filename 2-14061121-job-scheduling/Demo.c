@@ -12,11 +12,12 @@ void main(int argc,char ** argv)
      time(&timerc);
      if((timerc-timer)>=1)//每过1秒打印
      {
-        if(argc>1)
-            printf("%s",argv[1]);
-       printf("程序经过%d秒\n",count++);
+		if((timerc-timer)==1){
+			if(argc>1)
+            	printf("%s",argv[1]);
+       		printf("程序经过%d秒\n",count++);
+		}
        timer=timerc;
      }
   }
-
 }

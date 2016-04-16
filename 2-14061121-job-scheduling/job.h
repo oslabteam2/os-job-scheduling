@@ -48,6 +48,8 @@ struct jobinfo{
     int timer;
 };
 
+#define INFOLEN sizeof(struct jobinfo)
+
 struct waitqueue{
     struct waitqueue *next;
     struct jobinfo *job;
@@ -68,6 +70,8 @@ struct waitqueue *RemoveFromQueue(struct waitqueue* des, int Jobid);
 struct waitqueue *AddToQueue(struct waitqueue* des, struct waitqueue* tar);
 void print(struct waitqueue *tar);
 void trim();
+struct waitqueue *AddFirst(struct waitqueue* des, struct waitqueue* tar);
+
 
 void error_doit(int errnoflag,const char *fmt,va_list ap);
 void error_sys(const char *fmt,...);

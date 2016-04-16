@@ -9,7 +9,10 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <time.h>
-#include "job.h" 
+#include "job.h"
+
+#define DEBUG
+
 int jobid=0;
 int siginfo=1;
 int fifo;
@@ -40,6 +43,19 @@ void scheduler()
 #endif
 
 	/* 更新等待队列中的作业 */
+	/*#ifdef DEBUG
+		printf("Reading whether other process send command!\n");
+		if(count){
+			printf("cmd cmdtype\t%d\ncmd defpri\t%d\ncmd data\t%s\n",cmd.type,cmd.defpri,cmd.data);
+		}
+		else
+			printf("no data read\n");
+	#endif*/
+
+	/* 更新等待队列中的作业 */
+	/*#ifdef DEBUG
+		printf("Update jobs in wait queue!\n");
+	#endif*/
 	updateall();
     trim();
 	switch(cmd.type){
@@ -58,6 +74,17 @@ void scheduler()
 	/* 选择高优先级作业 */
 	next=jobselect();
 	/* 作业切换 */
+
+	/*#ifdef DEBUG
+		printf("Select which job to run next!\n");
+	#endif*/
+
+	next=jobselect();
+	/* 作业切换 */
+	/*#ifdef DEBUG
+		printf("Switch to the next job!\n");
+	#endif*/
+
 	jobswitch();
 }
 
@@ -70,6 +97,52 @@ void updateall()
 {
 	struct waitqueue *p, *prev,*stack;
 	int headflag=0;
+	char timebuf[BUFLEN];
+	/*	#ifdef DEBUG
+		printf("before updatrall\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
 	/* 更新作业运行时间 */
 	if(current){
 		current->job->run_time += 1; /* 加1代表1000ms */
@@ -101,7 +174,51 @@ void updateall()
 		}
 		prev = p, p = p->next;
 	}
+/*	#ifdef DEBUG
+		printf("after updatrall\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
 
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
 }
 void trim()
 {
@@ -139,6 +256,7 @@ void trim()
 struct waitqueue* jobselect()
 {
 	struct waitqueue *anext = NULL;
+	char timebuf[BUFLEN];
 
 	if(head[0]){
 		/* 遍历等待队列中的作业，找到优先级最高的作业 */
@@ -154,6 +272,21 @@ struct waitqueue* jobselect()
 		head[2]=head[2]->next;
 		anext->next=NULL;
 	}
+	/*	#ifdef DEBUG
+		if(anext){
+		printf("the selected job:\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+		strcpy(timebuf,ctime(&(anext->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("selected \t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			anext->job->jid,
+			anext->job->pid,
+			anext->job->ownerid,
+			anext->job->run_time,
+			anext->job->wait_time,
+			timebuf,"RUNNING",anext->job->curpri);
+	}
+	#endif*/
 	return anext;
 }
 
@@ -161,6 +294,7 @@ void jobswitch()
 {
 	struct waitqueue *p;
 	int i;
+	char timebuf[BUFLEN];
 
 	if(current && current->job->state == DONE){ /* 当前作业完成 */
 		/* 作业完成，删除它 */
@@ -189,6 +323,61 @@ void jobswitch()
 		return;
 	}
 	else if (next != NULL && current != NULL){ /* 切换作业 */
+/*#ifdef DEBUG
+	printf("before switch\n");
+	printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+	if(current){
+		strcpy(timebuf,ctime(&(current->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("current \t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			current->job->jid,
+			current->job->pid,
+			current->job->ownerid,
+			current->job->run_time,
+			current->job->wait_time,
+			timebuf,"RUNNING",current->job->curpri);
+	}
+
+	for(p=head[0];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+		for(p=head[1];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+		for(p=head[2];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+#endif*/
         if(current->job->timer > 0 || current->job->curpri > next->job->curpri)
         {
             head[PriorityHeader[next->job->curpri]]=AddFirst(head[PriorityHeader[next->job->curpri]],next);
@@ -212,6 +401,61 @@ void jobswitch()
 		current->next=NULL;
 		sleep(1);
 		kill(current->job->pid,SIGCONT);
+/*#ifdef DEBUG
+	printf("after switch\n");
+	printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+	if(current){
+		strcpy(timebuf,ctime(&(current->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("current \t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			current->job->jid,
+			current->job->pid,
+			current->job->ownerid,
+			current->job->run_time,
+			current->job->wait_time,
+			timebuf,"RUNNING",current->job->curpri);
+	}
+
+	for(p=head[0];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+		for(p=head[1];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+		for(p=head[2];p!=NULL;p=p->next){
+		strcpy(timebuf,ctime(&(p->job->create_time)));
+		timebuf[strlen(timebuf)-1]='\0';
+		printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+			p->job->jid,
+			p->job->pid,
+			p->job->ownerid,
+			p->job->run_time,
+			p->job->wait_time,
+			timebuf,
+			"READY",
+			p->job->curpri);
+	}
+#endif*/
 		return;
 	}else{ /* next == NULL且current != NULL，不切换 */
 
@@ -223,9 +467,14 @@ void sig_handler(int sig,siginfo_t *info,void *notused)
 {
 	int status;
 	int ret;
+	char timebuf[BUFLEN];
+	struct waitqueue *p;
 	switch (sig) {
 case SIGALRM: /* 到达计时器所设置的计时间隔 */
 	scheduler();
+	/*#ifdef DEBUG
+		printf("SIGVTALRM RECEIVED\n");
+	#endif*/
 	return;
 case SIGCHLD: /* 子进程结束时传送给父进程的信号 */
 	ret = waitpid(-1,&status,WNOHANG);
@@ -252,6 +501,53 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
 	char *offset,*argvec,*q;
 	char **arglist;
 	sigset_t zeromask;
+	char timebuf[BUFLEN];
+
+/*	#ifdef DEBUG
+		printf("before enq\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
 
 	sigemptyset(&zeromask);
     if(enqcmd.defpri==0)
@@ -342,16 +638,113 @@ void do_enq(struct jobinfo *newjob,struct jobcmd enqcmd)
             current->job->timer=0;
         }
 	}
+/*	#ifdef DEBUG
+		printf("after enq\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
 }
 
 void do_deq(struct jobcmd deqcmd)
 {
 	int deqid,i;
 	deqid=atoi(deqcmd.data);
+	char timebuf[BUFLEN];
+	struct waitqueue *newnode,*p;
 
 #ifdef DEBUG
 	printf("deq jid %d\n",deqid);
 #endif
+
+/*	#ifdef DEBUG
+		printf("before deq\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+
+	#ifdef DEBUG
+		printf("deq jid %d\n",deqid);
+	#endif
+*/
 
 	/*current jodid==deqid,终止当前作业*/
 	if (current && current->job->jid ==deqid){
@@ -371,6 +764,52 @@ void do_deq(struct jobcmd deqcmd)
             		head[i] = RemoveFromQueue(head[i],deqid);
 		}
 	}
+
+/*	#ifdef DEBUG
+		printf("after deq\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
 }
 
 void do_stat(struct jobcmd statcmd)
@@ -394,7 +833,53 @@ void do_stat(struct jobcmd statcmd)
 
 	/* 打印信息头部 */
 
-/*	printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+/*	#ifdef DEBUG
+		printf("before stat\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
+
+	printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
 	if(current){
 		strcpy(timebuf,ctime(&(current->job->create_time)));
 		timebuf[strlen(timebuf)-1]='\0';
@@ -446,7 +931,7 @@ void do_stat(struct jobcmd statcmd)
 			"READY",
 			p->job->curpri);
 	}
-*/
+
 	fd1=open("/tmp/stat",O_WRONLY|O_TRUNC);
 
 	if(current){
@@ -508,9 +993,54 @@ void do_stat(struct jobcmd statcmd)
 		length = strlen(string);
 		write(fd1,string,length);
 	}
-	
+
 	close(fd1);
-	
+/*	#ifdef DEBUG
+		printf("after stat\n");
+		printf("\t\tJOBID\tPID\tOWNER\tRUNTIME\tWAITTIME\tCREATTIME\t\tSTATE\tPRIO\n");
+
+		for(p=head[0];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The3prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[1];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The2prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+		for(p=head[2];p!=NULL;p=p->next){
+			strcpy(timebuf,ctime(&(p->job->create_time)));
+			timebuf[strlen(timebuf)-1]='\0';
+			printf("The1prioquue\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\n",
+				p->job->jid,
+				p->job->pid,
+				p->job->ownerid,
+				p->job->run_time,
+				p->job->wait_time,
+				timebuf,
+				"READY",
+				p->job->curpri);
+		}
+	#endif
+*/
+
 }
 
 int main()
@@ -519,7 +1049,12 @@ int main()
 	struct itimerval new,old;
 	struct stat statbuf;
 	struct sigaction newact,oldact1,oldact2;
-    	head[0] = head[1] = head[2] = NULL;
+    head[0] = head[1] = head[2] = NULL;
+
+	/*#ifdef DEBUG
+		printf("DEBUG IS OPEN!");
+	#endif*/
+
 	if(stat("/tmp/server",&statbuf)==0){
 		/* 如果FIFO文件存在,删掉 */
 		if(remove("/tmp/server")<0)
